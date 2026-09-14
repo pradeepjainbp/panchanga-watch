@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Panchanga Watch</title>
+<title>Hindu Calendar — Panchanga Watch</title>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Hind:wght@400;600&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
 <style>
 :root{--ink:#1c2340;--sun:#F08C00;--sunlt:#FFC93C;--moon:#D4E4FF;--pink:#ff8fb8;--bg:#090c1f}
@@ -11,7 +11,7 @@
 html,body{background:var(--bg);color:#fff;font-family:'Hind',sans-serif;overscroll-behavior:none}
 body{min-height:100vh;display:flex;flex-direction:column;align-items:center}
 header{width:100%;max-width:520px;padding:12px 16px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
-header h1{font-family:'Baloo 2',cursive;font-size:1.3rem;font-weight:800;color:var(--sunlt);line-height:1}
+header h1{font-family:'Baloo 2',cursive;font-size:1.35rem;font-weight:800;color:var(--sunlt);line-height:1}
 header h1 span{color:var(--moon)}
 #dateWrap{display:flex;align-items:center;gap:6px}
 #dateWrap input{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;padding:5px 8px;font-family:'Baloo 2',cursive;font-weight:700;font-size:.8rem;color-scheme:dark}
@@ -28,6 +28,8 @@ button.primary{background:var(--sun);border-color:var(--sun)}
 button.moonbtn{background:#2b3a7a;border-color:#2b3a7a}
 button.small{font-size:.72rem;padding:6px 8px}
 button.ghost{background:transparent}
+button.yr{background:#7B2FBE;border-color:#7B2FBE}
+button.yr.ghost{color:#c99bf0;border-color:#7B2FBE}
 button.day.ghost{color:#7effd4;border-color:#2D9C6B}
 button.primary.ghost{color:var(--sunlt);border-color:var(--sun)}
 button:active{transform:scale(.97)}
@@ -56,7 +58,7 @@ summary::before{content:'▸ ';}details[open] summary::before{content:'▾ '}
 </head>
 <body>
 <header>
-  <h1>☀ Surya · <span>☾ Chandra</span></h1>
+  <h1>Hindu <span>Calendar</span></h1>
   <div id="dateWrap"><input type="date" id="dateIn" value="2026-09-14"></div>
 </header>
 
@@ -79,7 +81,7 @@ summary::before{content:'▸ ';}details[open] summary::before{content:'▾ '}
     <circle cx="400" cy="400" r="116" fill="#000" opacity=".35"/>
     <g clip-path="url(#loupeClip)"><g id="loupeInner"><use href="#base"/><use href="#sunDisc"/><use href="#moonArm" opacity=".3"/><use href="#clip"/></g></g>
     <circle cx="400" cy="400" r="112" fill="none" stroke="#FFC93C" stroke-width="4"/>
-    <text x="400" y="525" font-size="11" fill="#FFC93C" text-anchor="middle" font-weight="800">🔍 lens</text>
+    
   </g>
 </svg>
 </div>
@@ -89,9 +91,11 @@ summary::before{content:'▸ ';}details[open] summary::before{content:'▾ '}
   <button class="day" onclick="stepDay(1)">Next day ›</button>
   <button class="primary ghost" onclick="stepNewMoon(-1)">‹ Previous New Moon</button>
   <button class="primary" onclick="stepNewMoon(1)">Next New Moon ›</button>
+  <button class="yr ghost" onclick="sameTithiYear(-1)">‹ Same tithi last year</button>
+  <button class="yr" onclick="sameTithiYear(1)">Same tithi next year ›</button>
   <button class="moonbtn small" onclick="setFull()">Full Moon</button>
   <button class="small" onclick="setToday()">Today</button>
-  <button class="small" id="lensBtn" onclick="toggleLens()">🔍 Lens: on while dragging</button>
+  <button class="small" id="lensBtn" onclick="toggleLens()">🔍 Lens: tap face or drag</button>
   <button class="small" id="zoomBtn" onclick="toggleZoom()">⤢ Zoom face ×2</button>
 </div>
 
@@ -105,6 +109,7 @@ summary::before{content:'▸ ';}details[open] summary::before{content:'▾ '}
 
 <details open>
   <summary>Festivals — Moon-ruled and Sun-ruled (tap a row to set the wheel)</summary>
+  <p class="note">Positions use Lahiri sidereal longitudes computed for 06:00 IST, accurate to about 0.02° — tithi and nakshatra match a drik panchanga on the day. Tithis change during the day, so near a boundary the printed panchanga may differ. For teaching, not for muhurta.</p>
   <p class="note"><span class="tag tg-m">MOON</span> fixed by <b>month + paksha + tithi</b>, so they wander ±3 weeks against Jan–Dec. <span class="tag tg-s">SUN</span> fixed by the Sun crossing a line (Sankranti), so they sit on nearly the same English date every year. Amanta reckoning (Karnataka / South India).</p>
   <table class="tbl" id="festTbl"><thead><tr><th>Festival</th><th>Rule</th><th>Approx.</th><th></th></tr></thead><tbody></tbody></table>
 </details>
@@ -156,10 +161,37 @@ const norm=a=>((a%360)+360)%360;
 function sector(r1,r2,a0,a1){const [x0,y0]=P(r2,a0),[x1,y1]=P(r2,a1),[x2,y2]=P(r1,a1),[x3,y3]=P(r1,a0);const big=a1-a0>180?1:0;return `M${x0},${y0}A${r2},${r2} 0 ${big} 1 ${x1},${y1}L${x2},${y2}A${r1},${r1} 0 ${big} 0 ${x3},${y3}Z`}
 function rtext(r,a,txt,size,fill,weight="700",cls="",flipAll=false){const [x,y]=P(r,a);let rot=norm(a);if(!flipAll&&rot>90&&rot<270)rot+=180;return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="middle" dominant-baseline="middle" class="${cls}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})">${txt}</text>`}
 function moonPath(cx,cy,r,elong){const ph=elong*Math.PI/180,f=(1-Math.cos(ph))/2;let s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#1c2340" stroke="#8892b8" stroke-width=".8"/>`;if(f<.02)return s;if(f>.98)return s+`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#F4EFD8"/>`;const wax=elong<180,rx=Math.abs(Math.cos(ph))*r;const o=wax?1:0,i=wax?(f>.5?1:0):(f>.5?0:1);return s+`<path d="M${cx},${cy-r}A${r},${r} 0 0 ${o} ${cx},${cy+r}A${rx.toFixed(2)},${r} 0 0 ${i} ${cx},${cy-r}Z" fill="#F4EFD8"/>`}
-// Gregorian date → sidereal sun longitude (deg, 0=Mesha 0) & day-of-year angle
-const dayLon=d=>norm(280.46+0.9856474*d-AYAN); // d = days since J2000
-function daysJ2000(date){return (Date.UTC(date.getFullYear(),date.getMonth(),date.getDate(),12)-Date.UTC(2000,0,1,12))/86400000}
-const monthStartLon=GREG.map((_,i)=>dayLon(daysJ2000(new Date(2026,i,1))));
+// ── Astronomy: sidereal (Lahiri) longitudes, accurate to ~0.02° ──
+const RAD=Math.PI/180, sind=x=>Math.sin(x*RAD);
+const AY=j=>24.203+(j/365.25)*50.2888/3600;          // Lahiri ayanamsa
+function sunLon(j){const M=norm(357.5291+0.98560028*j),L=norm(280.459+0.98564736*j);
+  return norm(L+1.9148*sind(M)+0.0200*sind(2*M)+0.0003*sind(3*M)-AY(j));}
+function moonLon(j){
+  const L=norm(218.3164477+13.17639648*j),D=norm(297.8501921+12.19074912*j),
+        M=norm(357.5291092+0.98560028*j),Mp=norm(134.9633964+13.06499295*j),F=norm(93.2720950+13.22935024*j);
+  const v=L+6.28875*sind(Mp)+1.274018*sind(2*D-Mp)+0.658309*sind(2*D)+0.213616*sind(2*Mp)
+   -0.185596*sind(M)-0.114336*sind(2*F)+0.058793*sind(2*D-2*Mp)+0.057212*sind(2*D-M-Mp)
+   +0.053320*sind(2*D+Mp)+0.045874*sind(2*D-M)+0.041024*sind(Mp-M)-0.034718*sind(D)
+   -0.030465*sind(M+Mp)+0.015326*sind(2*D-2*F)-0.012528*sind(2*F+Mp)-0.010980*sind(2*F-Mp)
+   +0.010674*sind(4*D-Mp)+0.010034*sind(3*Mp)+0.008548*sind(4*D-2*Mp)-0.007910*sind(M-Mp+2*D)
+   -0.006783*sind(2*D+M)+0.005162*sind(Mp-D)+0.005000*sind(M+D)+0.004049*sind(Mp-M+2*D)
+   +0.003996*sind(2*Mp+2*D)+0.003862*sind(4*D)+0.003665*sind(2*D-3*Mp)-0.002689*sind(M+2*Mp)
+   -0.002602*sind(Mp-2*F+2*D);
+  return norm(v-AY(j));}
+const elongAt=j=>norm(moonLon(j)-sunLon(j));
+function newMoonBefore(j){let x=j-elongAt(j)/12.1907;
+  for(let i=0;i<50;i++){let e=elongAt(x); if(e>180)e-=360; x-=e/12.1907;}
+  if(x>j)x-=29.53; return x;}
+function newMoonAfter(j){let x=newMoonBefore(j)+29.53;
+  for(let i=0;i<50;i++){let e=elongAt(x); if(e>180)e-=360; x-=e/12.1907;}
+  return x;}
+// true masa rule: month named from the rashi the Sun occupies at the previous New Moon
+function masaAt(j){const nm=newMoonBefore(j),nx=newMoonAfter(j);
+  const r0=Math.floor(sunLon(nm)/30),r1=Math.floor(sunLon(nx)/30);
+  return {idx:(r0+1)%12, adhika:r0===r1, kshaya:norm((r1-r0)*30)===60, nm, nx};}
+const fmtD=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+function daysJ2000(date){return (Date.UTC(date.getFullYear(),date.getMonth(),date.getDate(),0,30)-Date.UTC(2000,0,1,12))/86400000}
+const monthStartLon=GREG.map((_,i)=>sunLon(daysJ2000(new Date(2026,i,1))));
 
 // ───────── BASE ─────────
 function buildBase(){
@@ -228,9 +260,9 @@ function buildMoon(){
 }
 
 // ───────── STATE ─────────
-let sunA=0,moonA=0,dow=0,clipA=null,months=0,lastResult=null,curDate=new Date(2026,8,14),dateKnown=true;
+let sunA=0,moonA=0,curJ=0,dow=0,clipA=null,months=0,lastResult=null,curDate=new Date(2026,8,14),dateKnown=true;
 const gSun=document.getElementById('sunDisc'),gMoon=document.getElementById('moonArm'),gClip=document.getElementById('clip');
-function setFromDate(d){curDate=d;dateKnown=true;const j=daysJ2000(d);sunA=dayLon(j);moonA=norm(218.316+13.176396*j-AYAN);dow=d.getDay();document.getElementById('dateIn').value=d.toISOString().slice(0,10);}
+function setFromDate(d){curDate=d;dateKnown=true;const j=daysJ2000(d);curJ=j;sunA=sunLon(j);moonA=moonLon(j);dow=d.getDay();document.getElementById('dateIn').value=fmtD(d);}
 function render(){
   gSun.setAttribute('transform',`rotate(${sunA} ${C} ${C})`);gMoon.setAttribute('transform',`rotate(${moonA} ${C} ${C})`);
   document.getElementById('weekHand').setAttribute('transform',`rotate(${dow*360/7+360/14} ${C} ${C})`);
@@ -238,7 +270,7 @@ function render(){
   readout();
   if(typeof lensMode!=='undefined'&&lensMode)lensUpdate();
 }
-function monthOf(s){const full=norm(s+180);let best=0,bd=999;MONTHS.forEach((mo,i)=>{const a0=mo[2][0]*NK_W,a1=(mo[2][mo[2].length-1]+1)*NK_W,c=(a0+a1)/2;let d=Math.abs(norm(full-c));if(d>180)d=360-d;if(d<bd){bd=d;best=i}});return best}
+function monthOf(s,el){const sNM=norm(s-el*0.0748);return (Math.floor(sNM/30)+1)%12}
 function readout(){
   const s=norm(sunA),m=norm(moonA),el=norm(m-s),t=Math.floor(el/12);
   const rIdx=Math.floor(s/30),ritu=RITU.find(r=>norm(s-r[2])<60);
@@ -248,43 +280,82 @@ function readout(){
   document.getElementById('rMoon').textContent=t===14?'Purnima':t===29?'Amavasya':`${paksha} ${TITHI[n-1]}`;
   const nkM=Math.floor(m/NK_W);
   document.getElementById('rMoonS').innerHTML=`${paksha} ${n} · ${Math.round(el)}° from Sun<br>in <b>${NK[nkM][0]}</b> — ${NK[nkM][2]}`;
-  const mi=monthOf(s),mo=MONTHS[mi],fnk=NK[Math.floor(norm(s+180)/NK_W)];
-  document.getElementById('rMonth').innerHTML=`${mo[0]} <span class="dev" style="font-size:.9rem;color:#ffb3cf">${mo[1]}</span>`;
-  document.getElementById('rMonthS').innerHTML=`Full Moon lands in <b>${fnk[0]}</b> → naming star group <b>${mo[2].map(i=>NK[i][0]).join(' / ')}</b>`;
+  let mi,extra='';
+  if(dateKnown){const M=masaAt(curJ);mi=M.idx;
+    if(M.adhika)extra=' <span class="badge b-ad">ADHIKA</span>';
+    else if(M.kshaya)extra=' <span class="badge b-ks">KSHAYA</span>';}
+  else mi=monthOf(s,el);
+  const mo=MONTHS[mi],fnk=NK[Math.floor(norm(s+180)/NK_W)];
+  document.getElementById('rMonth').innerHTML=`${mo[0]} <span class="dev" style="font-size:.9rem;color:#ffb3cf">${mo[1]}</span>${extra}`;
+  document.getElementById('rMonthS').innerHTML=`${paksha} paksha · named from the Sun's rashi at the last New Moon. Full Moon falls in <b>${fnk[0]}</b> → naming group <b>${mo[2].map(i=>NK[i][0]).join(' / ')}</b>`;
   // festival match
-  const hits=FEST.filter(f=>f[1]==='m'?(f[2]===mi&&f[3]===t):Math.abs(((norm(s-f[2])+180)%360)-180)<1);
+  const isAdh=dateKnown&&masaAt(curJ).adhika;
+  const hits=FEST.filter(f=>f[1]==='m'?(!isAdh&&f[2]===mi&&f[3]===t):Math.abs(((norm(s-f[2])+180)%360)-180)<1);
   document.getElementById('rFest').textContent=hits.length?hits.map(h=>h[0]).join(' · '):'— none today —';
-  document.getElementById('rFestS').textContent=hits.length?hits.map(h=>`${h[4]}: ${h[6]}`).join(' · '):'Tap a festival below to jump the wheel to it.';
+  document.getElementById('rFestS').textContent=hits.length?hits.map(h=>`${h[4]}: ${h[6]}`).join(' · '):(isAdh?'This is an Adhika Masa — an extra month. Festivals skip it and wait for the real month that follows.':'Tap a festival below to jump the wheel to it.');
   if(lastResult){const [k,txt]=lastResult;document.getElementById('rAdh').innerHTML=`Month ${months}: <span class="badge ${k}">${txt}</span>`;}
 }
 // ───────── ACTIONS ─────────
-function stepDay(k){dow=(dow+k+7)%7;sunA+=0.9856*k;moonA+=13.1764*k;if(dateKnown){curDate=new Date(curDate.getTime()+86400000*k);document.getElementById('dateIn').value=curDate.toISOString().slice(0,10);}render()}
+function stepDay(k){if(dateKnown){setFromDate(new Date(curDate.getTime()+86400000*k));}else{dow=(dow+k+7)%7;sunA+=0.9856*k;moonA+=13.1764*k;}render()}
 function stepNewMoon(k){const s=norm(sunA);
   if(clipA===null){clipA=s;moonA=sunA;months=0;lastResult=['b-ok','Clip placed at Amavasya — press again'];render();return;}
   const s2=norm(s+29.106*k);const lo=k>0?clipA:s2,span=norm(k>0?s2-clipA:clipA-s2);let cross=0;for(let j=1;j<=12;j++){const d=norm(j*30-lo);if(d>0&&d<=span)cross++;}
   months+=k;const dir=k>0?'':' (going back)';
   lastResult=cross===1?['b-ok','Normal ✓ (1 line)'+dir]:cross===0?['b-ad','ADHIKA MASA! (0 lines → extra month)'+dir]:['b-ks','KSHAYA MASA (2 lines → month lost)'+dir];
-  clipA=s2;sunA=s2;moonA=s2;dow=(dow+30*k+700)%7;if(dateKnown){curDate=new Date(curDate.getTime()+29.53*86400000*k);document.getElementById('dateIn').value=curDate.toISOString().slice(0,10);}render()}
+  clipA=s2;if(dateKnown){setFromDate(new Date(curDate.getTime()+29.53*86400000*k));const nm=(k>0?newMoonAfter(curJ):newMoonBefore(curJ));setFromDate(new Date(Date.UTC(2000,0,1,12)+nm*86400000));}else{sunA=s2;moonA=s2;dow=(dow+30*k+700)%7;}render()}
+function tithiIdx(j){return Math.floor(elongAt(j)/12)}
+function sameTithiYear(dir){
+  if(!dateKnown){alert('Pick a date first');return;}
+  const tgtT=tithiIdx(curJ), M=masaAt(curJ), tgtM=M.idx;
+  let best=null,bestGap=999;
+  for(let d=330;d<=400;d++){const j=curJ+dir*d;const mm=masaAt(j);
+    if(mm.adhika||mm.idx!==tgtM)continue;
+    const t=tithiIdx(j),gap=Math.abs(((t-tgtT+15+30)%30)-15);
+    if(gap<bestGap){bestGap=gap;best=j;if(gap===0)break;}}
+  if(best===null){alert('Could not find that tithi — try a neighbouring day.');return;}
+  const ms=Date.UTC(2000,0,1,12)+best*86400000;const nd=new Date(ms);
+  setFromDate(new Date(nd.getFullYear(),nd.getMonth(),nd.getDate()));render();
+  const note=bestGap?` (nearest — that tithi is skipped this year)`:'';
+  document.getElementById('rAdh').innerHTML=`Same <b>${MONTHS[tgtM][0]} ${tgtT<15?'Shukla':'Krishna'} ${tgtT<15?tgtT+1:tgtT-14}</b> falls on <b>${curDate.toDateString().slice(4)}</b>${note}`;
+}
 function setFull(){moonA=norm(sunA+180);dateKnown=false;render()}
 function setToday(){setFromDate(new Date());clipA=null;lastResult=null;document.getElementById('rAdh').textContent='Press "Next New Moon" to start';render()}
 function gotoFest(i){const f=FEST[i];dateKnown=false;
   if(f[1]==='s'){sunA=f[2];}else{const mo=MONTHS[f[2]],a0=mo[2][0]*NK_W,a1=(mo[2][mo[2].length-1]+1)*NK_W;sunA=norm((a0+a1)/2-180);moonA=norm(sunA+f[3]*12+6);}
   render();document.getElementById('stage').scrollIntoView({behavior:'smooth'})}
-document.getElementById('dateIn').addEventListener('change',e=>{const [y,mo,d]=e.target.value.split('-').map(Number);setFromDate(new Date(y,mo-1,d));render()});
+let _busy=false;document.getElementById('dateIn').addEventListener('change',e=>{if(_busy)return;_busy=true;const [y,mo,d]=e.target.value.split('-').map(Number);if(y&&mo&&d){setFromDate(new Date(y,mo-1,d));render();}_busy=false;});
 // festival table
 document.querySelector('#festTbl tbody').innerHTML=FEST.map((f,i)=>`<tr onclick="gotoFest(${i})"><td><b>${f[0]}</b></td><td><span class="tag ${f[1]==='m'?'tg-m':'tg-s'}">${f[1]==='m'?'MOON':'SUN'}</span> ${f[4]}</td><td>${f[5]}</td><td class="go">set ›</td></tr>`).join('');
 // ───────── DRAG ─────────
 const svg=document.getElementById('w');
 function ptAngle(e){const r=svg.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*800-C,y=(e.clientY-r.top)/r.height*800-C;return Math.atan2(x,-y)*180/Math.PI}
-let drag=null,lensMode=0,lensTimer=null; // 0 auto (drag only), 1 follow Moon, 2 follow Sun
-function showLoupe(layer){const g=document.getElementById('loupe');const r=layer==='sun'?305:340;const a=layer==='sun'?sunA:moonA;const [px,py]=P(r,a);const k=layer==='sun'?2:2.3;
-  document.getElementById('loupeInner').setAttribute('transform',`translate(${C} ${C}) scale(${k}) translate(${-px} ${-py})`);g.style.display='';}
-function toggleZoom(){const st=document.getElementById('stage');st.classList.toggle('zoom');const z=st.classList.contains('zoom');document.getElementById('zoomBtn').textContent=z?'⤢ Zoom face: ×2 (drag to pan)':'⤢ Zoom face ×2';if(z){requestAnimationFrame(()=>{st.scrollLeft=(st.scrollWidth-st.clientWidth)/2;st.scrollTop=(st.scrollHeight-st.clientHeight)/2;});}}
+let drag=null,lensMode=0,lensTimer=null,tapLens=null; // 0 auto (drag only), 1 follow Moon, 2 follow Sun
+function showLoupeAt(px,py,k){k=k||2.3;const g=document.getElementById('loupe');
+  const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+  // sit the lens above the finger, nudged back inside the face
+  let cxp=clamp(px,130,670), cyp=clamp(py-150,130,670);
+  if(Math.hypot(cxp-px,cyp-py)<60) cyp=clamp(py+150,130,670);
+  document.getElementById('loupeInner').setAttribute('transform',`translate(${C} ${C}) scale(${k}) translate(${-px} ${-py})`);
+  g.setAttribute('transform',`translate(${(cxp-C).toFixed(1)} ${(cyp-C).toFixed(1)})`);
+  g.style.display='';}
+function showLoupe(layer){const r=layer==='sun'?305:340;const a=layer==='sun'?sunA:moonA;const [px,py]=P(r,a);showLoupeAt(px,py,layer==='sun'?2:2.3);}
+function toggleZoom(){const st=document.getElementById('stage');st.classList.toggle('zoom');const z=st.classList.contains('zoom');document.getElementById('zoomBtn').textContent=z?'⤢ Zoom ×2: tap to centre':'⤢ Zoom face ×2';if(z){requestAnimationFrame(()=>{st.scrollLeft=(st.scrollWidth-st.clientWidth)/2;st.scrollTop=(st.scrollHeight-st.clientHeight)/2;});}}
 function hideLoupe(){document.getElementById('loupe').style.display='none'}
-function toggleLens(){lensMode=(lensMode+1)%3;const b=document.getElementById('lensBtn');b.textContent=['🔍 Lens: on while dragging','🔍 Lens: follow Moon tip','🔍 Lens: follow Sun hand'][lensMode];lensUpdate();}
-function lensUpdate(){if(lensMode===1)showLoupe('moon');else if(lensMode===2)showLoupe('sun');else if(drag)showLoupe(drag.layer);else hideLoupe();}
+function toggleLens(){lensMode=(lensMode+1)%3;const b=document.getElementById('lensBtn');b.textContent=['🔍 Lens: tap face or drag','🔍 Lens: follow Moon tip','🔍 Lens: follow Sun hand'][lensMode];lensUpdate();}
+function lensUpdate(){if(drag)showLoupe(drag.layer);else if(tapLens)showLoupeAt(tapLens[0],tapLens[1]);else if(lensMode===1)showLoupe('moon');else if(lensMode===2)showLoupe('sun');else hideLoupe();}
 const down=layer=>e=>{e.preventDefault();drag={layer,start:ptAngle(e),base:layer==='sun'?sunA:moonA};svg.setPointerCapture&&svg.setPointerCapture(e.pointerId);lensUpdate()};
 gSun.addEventListener('pointerdown',down('sun'));gMoon.addEventListener('pointerdown',down('moon'));
+function svgPt(e){const r=svg.getBoundingClientRect();return [(e.clientX-r.left)/r.width*800,(e.clientY-r.top)/r.height*800];}
+svg.addEventListener('pointerdown',e=>{
+  const st=document.getElementById('stage');
+  if(st.classList.contains('zoom')){const r=svg.getBoundingClientRect();
+    st.scrollLeft+=(e.clientX-r.left)-st.clientWidth/2-st.scrollLeft*0;
+    st.scrollLeft=(e.clientX-r.left)+svg.offsetLeft-st.clientWidth/2;
+    st.scrollTop=(e.clientY-r.top)+svg.offsetTop-st.clientHeight/2;return;}
+  if(drag)return;
+  const [px,py]=svgPt(e);const d=Math.hypot(px-C,py-C);
+  if(d>70&&d<400){tapLens=[px,py];showLoupeAt(px,py);clearTimeout(lensTimer);lensTimer=setTimeout(()=>{tapLens=null;lensUpdate()},2500);}
+});
 svg.addEventListener('pointermove',e=>{if(!drag)return;const d=ptAngle(e)-drag.start;if(drag.layer==='sun')sunA=drag.base+d;else moonA=drag.base+d;dateKnown=false;render();lensUpdate();});
 svg.addEventListener('pointerup',()=>{drag=null;clearTimeout(lensTimer);lensTimer=setTimeout(lensUpdate,1500)});svg.addEventListener('pointercancel',()=>{drag=null;lensUpdate()});
 
