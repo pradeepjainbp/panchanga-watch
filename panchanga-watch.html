@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Panchanga Watch</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Hind:wght@400;600&family=Noto+Sans+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#1c2340;--sun:#F08C00;--sunlt:#FFC93C;--moon:#D4E4FF;--pink:#ff8fb8;--bg:#090c1f}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:#fff;font-family:'Hind',sans-serif;overscroll-behavior:none}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center}
+header{width:100%;max-width:520px;padding:12px 16px 2px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+header h1{font-family:'Baloo 2',cursive;font-size:1.3rem;font-weight:800;color:var(--sunlt);line-height:1}
+header h1 span{color:var(--moon)}
+#dateWrap{display:flex;align-items:center;gap:6px}
+#dateWrap input{background:rgba(255,255,255,.08);border:1.5px solid rgba(255,255,255,.2);color:#fff;border-radius:10px;padding:5px 8px;font-family:'Baloo 2',cursive;font-weight:700;font-size:.8rem;color-scheme:dark}
+#stage{width:100%;max-width:520px;padding:2px 4px;touch-action:none;user-select:none;-webkit-user-select:none;overflow:hidden}
+#stage.zoom{touch-action:pan-x pan-y;overflow:auto;max-height:78vh;scrollbar-width:none;border-radius:16px;border:2px solid rgba(255,201,60,.4)}
+#stage.zoom svg{width:200%}
+#sunDisc,#moonArm{touch-action:none}
+svg{width:100%;height:auto;display:block}
+.dev{font-family:'Noto Sans Devanagari',sans-serif}
+#controls{width:100%;max-width:520px;padding:4px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+button{border:0;border-radius:14px;padding:10px 8px;font-family:'Baloo 2',cursive;font-weight:800;font-size:.82rem;cursor:pointer;color:#fff;background:rgba(255,255,255,.09);border:1.5px solid rgba(255,255,255,.16)}
+button.day{background:#2D9C6B;border-color:#2D9C6B}
+button.primary{background:var(--sun);border-color:var(--sun)}
+button.moonbtn{background:#2b3a7a;border-color:#2b3a7a}
+button.small{font-size:.72rem;padding:6px 8px}
+button.ghost{background:transparent}
+button.day.ghost{color:#7effd4;border-color:#2D9C6B}
+button.primary.ghost{color:var(--sunlt);border-color:var(--sun)}
+button:active{transform:scale(.97)}
+#read{width:100%;max-width:520px;padding:6px 10px 10px;display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.card{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:9px 11px}
+.card.wide{grid-column:1/-1}
+.card .t{font-size:.6rem;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:2px}
+.card .v{font-family:'Baloo 2',cursive;font-size:1.15rem;font-weight:800;line-height:1.15}
+.card .s{font-size:.85rem;color:rgba(255,255,255,.65);margin-top:3px;line-height:1.4}
+.sunc .v{color:var(--sunlt)} .moonc .v{color:var(--moon)} .monc .v{color:var(--pink)} .fest .v{color:#7effd4}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-family:'Baloo 2',cursive;font-weight:800;font-size:.78rem;margin-left:4px}
+.b-ok{background:#2D9C6B} .b-ad{background:var(--sun)} .b-ks{background:#C0392B}
+details{width:100%;max-width:520px;padding:0 10px 40px}
+summary{cursor:pointer;font-family:'Baloo 2',cursive;font-weight:800;font-size:.95rem;color:var(--sunlt);padding:8px 0;list-style:none}
+summary::before{content:'▸ ';}details[open] summary::before{content:'▾ '}
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem;margin:4px 0 12px}
+.tbl th{text-align:left;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45);padding:4px 4px;border-bottom:1px solid rgba(255,255,255,.15)}
+.tbl td{padding:6px 4px;border-bottom:1px solid rgba(255,255,255,.07);vertical-align:top}
+.tbl td b{font-family:'Baloo 2',cursive;font-size:.9rem}
+.tbl tr{cursor:pointer}.tbl tr:active{background:rgba(255,255,255,.08)}
+.tbl .go{color:var(--sunlt);font-weight:800;text-align:right;white-space:nowrap}
+.tag{display:inline-block;font-size:.58rem;padding:1px 6px;border-radius:8px;font-weight:700;letter-spacing:.05em}
+.tg-m{background:#2b3a7a;color:var(--moon)} .tg-s{background:#6b3d00;color:var(--sunlt)}
+.note{font-size:.7rem;color:rgba(255,255,255,.5);line-height:1.45;margin-bottom:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>☀ Surya · <span>☾ Chandra</span></h1>
+  <div id="dateWrap"><input type="date" id="dateIn" value="2026-09-14"></div>
+</header>
+
+<div id="stage">
+<svg id="w" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="sunG"><stop offset="0" stop-color="#FFF3B0"/><stop offset=".55" stop-color="#FFC93C"/><stop offset="1" stop-color="#F08C00"/></radialGradient>
+    <linearGradient id="bezel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4270"/><stop offset=".5" stop-color="#141a3a"/><stop offset="1" stop-color="#2a3160"/></linearGradient>
+    <filter id="sh" x="-10%" y="-10%" width="120%" height="120%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".4"/></filter>
+    <clipPath id="loupeClip"><circle cx="400" cy="400" r="112"/></clipPath>
+    <mask id="armMask"><rect width="800" height="800" fill="#fff"/><circle cx="400" cy="215" r="19" fill="#000"/></mask>
+  </defs>
+  <g id="base"></g>
+  <g id="sunDisc" style="cursor:grab"></g>
+  <g id="weekDial"></g>
+  <g id="moonArm" style="cursor:grab"></g>
+  <g id="clip"></g>
+  <circle cx="400" cy="400" r="6" fill="#222" stroke="#fff" stroke-width="1.5"/>
+  <g id="loupe" style="display:none;pointer-events:none">
+    <circle cx="400" cy="400" r="116" fill="#000" opacity=".35"/>
+    <g clip-path="url(#loupeClip)"><g id="loupeInner"><use href="#base"/><use href="#sunDisc"/><use href="#moonArm" opacity=".3"/><use href="#clip"/></g></g>
+    <circle cx="400" cy="400" r="112" fill="none" stroke="#FFC93C" stroke-width="4"/>
+    <text x="400" y="525" font-size="11" fill="#FFC93C" text-anchor="middle" font-weight="800">🔍 lens</text>
+  </g>
+</svg>
+</div>
+
+<div id="controls">
+  <button class="day ghost" onclick="stepDay(-1)">‹ Previous day</button>
+  <button class="day" onclick="stepDay(1)">Next day ›</button>
+  <button class="primary ghost" onclick="stepNewMoon(-1)">‹ Previous New Moon</button>
+  <button class="primary" onclick="stepNewMoon(1)">Next New Moon ›</button>
+  <button class="moonbtn small" onclick="setFull()">Full Moon</button>
+  <button class="small" onclick="setToday()">Today</button>
+  <button class="small" id="lensBtn" onclick="toggleLens()">🔍 Lens: on while dragging</button>
+  <button class="small" id="zoomBtn" onclick="toggleZoom()">⤢ Zoom face ×2</button>
+</div>
+
+<div id="read">
+  <div class="card sunc"><div class="t">☀ Sun · Rashi</div><div class="v" id="rSun">—</div><div class="s" id="rSunS"></div></div>
+  <div class="card moonc"><div class="t">☾ Moon · Tithi</div><div class="v" id="rMoon">—</div><div class="s" id="rMoonS"></div></div>
+  <div class="card monc wide"><div class="t">📅 Masa · month</div><div class="v" id="rMonth">—</div><div class="s" id="rMonthS"></div></div>
+  <div class="card fest wide"><div class="t">🎉 Festival on this day</div><div class="v" id="rFest">—</div><div class="s" id="rFestS"></div></div>
+  <div class="card wide"><div class="t">Adhika / Kshaya counter — clip vs Sun</div><div class="v" id="rAdh">Press "Next New Moon" to start</div><div class="s" id="rAdhS">Each press: Moon meets Sun (Amavasya), the red clip drops where the Sun was, Sun moves on ~29°. Sankranti lines crossed: 1 = normal · 0 = <b>Adhika Masa</b> · 2 = <b>Kshaya Masa</b>.</div></div>
+</div>
+
+<details open>
+  <summary>Festivals — Moon-ruled and Sun-ruled (tap a row to set the wheel)</summary>
+  <p class="note"><span class="tag tg-m">MOON</span> fixed by <b>month + paksha + tithi</b>, so they wander ±3 weeks against Jan–Dec. <span class="tag tg-s">SUN</span> fixed by the Sun crossing a line (Sankranti), so they sit on nearly the same English date every year. Amanta reckoning (Karnataka / South India).</p>
+  <table class="tbl" id="festTbl"><thead><tr><th>Festival</th><th>Rule</th><th>Approx.</th><th></th></tr></thead><tbody></tbody></table>
+</details>
+
+<script>
+// ───────── DATA ─────────
+const NK=[["Ashwini","अश्विनी","horse's head",[[0,0],[10,-6],[18,2]],[[0,1],[1,2]]],["Bharani","भरणी","basket",[[0,0],[14,0],[7,10]],[[0,1],[1,2],[2,0]]],["Krittika","कृत्तिका","flame / Pleiades",[[0,0],[6,-5],[12,-2],[9,5],[3,7],[15,6]],[[0,1],[1,2],[2,3],[3,4],[4,0],[2,5]]],["Rohini","रोहिणी","cart",[[0,0],[8,-8],[16,0],[8,6],[24,-4]],[[0,1],[1,2],[2,3],[3,0],[2,4]]],["Mrigashira","मृगशिरा","deer's head",[[0,0],[9,-9],[18,0]],[[0,1],[1,2]]],["Ardra","आर्द्रा","teardrop",[[0,0]],[]],["Punarvasu","पुनर्वसु","bow & quiver",[[0,0],[16,0]],[[0,1]]],["Pushya","पुष्य","flower",[[0,0],[12,-6],[12,6]],[[0,1],[0,2]]],["Ashlesha","आश्लेषा","coiled serpent",[[0,0],[7,-6],[14,-2],[18,6],[10,10]],[[0,1],[1,2],[2,3],[3,4]]],["Magha","मघा","throne",[[0,0],[6,-10],[14,-14],[22,-10],[20,0]],[[0,1],[1,2],[2,3],[3,4]]],["P.Phalguni","पूर्व फाल्गुनी","bed (front)",[[0,0],[0,12]],[[0,1]]],["U.Phalguni","उत्तर फाल्गुनी","bed (back)",[[0,0],[0,12]],[[0,1]]],["Hasta","हस्त","hand",[[0,0],[10,-8],[20,-4],[18,8],[6,10]],[[0,1],[1,2],[2,3],[3,4],[4,0]]],["Chitra","चित्रा","jewel",[[0,0]],[]],["Swati","स्वाती","sprout",[[0,0]],[]],["Vishakha","विशाखा","archway",[[0,0],[6,-10],[16,-10],[22,0]],[[0,1],[1,2],[2,3]]],["Anuradha","अनुराधा","lotus",[[0,0],[8,-6],[16,0],[8,6]],[[0,1],[1,2],[2,3]]],["Jyeshtha","ज्येष्ठा","earring",[[0,0],[10,4],[20,0]],[[0,1],[1,2]]],["Mula","मूल","tied roots",[[0,0],[8,-6],[16,-4],[22,2],[18,10],[8,12],[2,8]],[[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,0]]],["P.Ashadha","पूर्वाषाढ़ा","fan",[[0,0],[14,-4]],[[0,1]]],["U.Ashadha","उत्तराषाढ़ा","tusk",[[0,0],[14,4]],[[0,1]]],["Shravana","श्रवण","ear / footprints",[[0,0],[9,-4],[18,-8]],[[0,1],[1,2]]],["Dhanishtha","धनिष्ठा","drum",[[0,0],[8,-8],[16,0],[8,8]],[[0,1],[1,2],[2,3],[3,0]]],["Shatabhisha","शतभिषा","empty circle",[[0,0],[10,-6],[20,0],[10,6],[10,0]],[[0,1],[1,2],[2,3],[3,0]]],["P.Bhadrapada","पूर्वभाद्रपदा","cot (front)",[[0,0],[0,12]],[[0,1]]],["U.Bhadrapada","उत्तरभाद्रपदा","cot (back)",[[0,0],[0,12]],[[0,1]]],["Revati","रेवती","fish",[[0,0],[8,-6],[16,0],[24,-6],[8,6],[16,0]],[[0,1],[1,2],[2,3],[0,4],[4,5]]]];
+const MONTHS=[["Chaitra","चैत्र",[13],"#5CB85C"],["Vaishakha","वैशाख",[15],"#5CB85C"],["Jyeshtha","ज्येष्ठ",[17],"#F0A030"],["Ashadha","आषाढ़",[19,20],"#F0A030"],["Shravana","श्रावण",[21],"#3C8DD8"],["Bhadrapada","भाद्रपद",[24,25],"#3C8DD8"],["Ashwin","आश्विन",[0],"#E8B830"],["Kartika","कार्तिक",[2],"#E8B830"],["Margashirsha","मार्गशीर्ष",[4],"#9B6FCF"],["Pausha","पौष",[7],"#9B6FCF"],["Magha","माघ",[9],"#7FA9C9"],["Phalguna","फाल्गुन",[10,11],"#7FA9C9"]];
+const RASHI=["Mesha","Vrishabha","Mithuna","Karka","Simha","Kanya","Tula","Vrishchika","Dhanu","Makara","Kumbha","Meena"];
+const SANK=["14 Apr","15 May","15 Jun","16 Jul","17 Aug","17 Sep","17 Oct","16 Nov","16 Dec","14 Jan","13 Feb","14 Mar"];
+const RITU=[["Shishira","Winter",270,"#7FA9C9"],["Vasanta","Spring",330,"#5CB85C"],["Grishma","Summer",30,"#F0A030"],["Varsha","Monsoon",90,"#3C8DD8"],["Sharad","Autumn",150,"#E8B830"],["Hemanta","Pre-winter",210,"#9B6FCF"]];
+const TITHI=["Pratipada","Dwitiya","Tritiya","Chaturthi","Panchami","Shashthi","Saptami","Ashtami","Navami","Dashami","Ekadashi","Dwadashi","Trayodashi","Chaturdashi"];
+const VARA=[["Ravi","☉","Sun"],["Soma","☽","Mon"],["Mangala","♂","Tue"],["Budha","☿","Wed"],["Guru","♃","Thu"],["Shukra","♀","Fri"],["Shani","♄","Sat"]];
+const GREG=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const NK_W=360/27, C=400, AYAN=24.2;
+// Festivals: type m = [monthIdx, tithi(0-29)], type s = sunLongitude
+const FEST=[
+ ["Ugadi / Gudi Padwa","m",0,0,"Chaitra Shukla 1","Mar–Apr","New year — first day after Chaitra Amavasya"],
+ ["Ram Navami","m",0,8,"Chaitra Shukla 9","Mar–Apr","Birth of Rama"],
+ ["Hanuman Jayanti","m",0,14,"Chaitra Purnima","Apr","Full Moon"],
+ ["Vishu · Baisakhi · Puthandu · Bihu","s",0,null,"Mesha Sankranti","14 Apr","Sun enters Mesha — solar new year"],
+ ["Akshaya Tritiya","m",1,2,"Vaishakha Shukla 3","Apr–May","Ever-auspicious day"],
+ ["Buddha Purnima","m",1,14,"Vaishakha Purnima","May","Full Moon"],
+ ["Vat Savitri","m",2,14,"Jyeshtha Purnima","Jun","Full Moon"],
+ ["Ratha Yatra","m",3,1,"Ashadha Shukla 2","Jun–Jul","Jagannath chariot festival"],
+ ["Guru Purnima","m",3,14,"Ashadha Purnima","Jul","Full Moon"],
+ ["Karka Sankranti · Dakshinayana","s",90,null,"Karka Sankranti","16 Jul","Sun starts its southern journey"],
+ ["Nag Panchami","m",4,4,"Shravana Shukla 5","Jul–Aug","Snakes worshipped"],
+ ["Raksha Bandhan","m",4,14,"Shravana Purnima","Aug","Full Moon"],
+ ["Krishna Janmashtami","m",4,22,"Shravana Krishna 8","Aug–Sep","Birth of Krishna"],
+ ["Onam (Thiruvonam)","s",130,null,"Sun in Simha + Shravana nakshatra","Aug–Sep","Solar month Chingam; day picked by Moon's nakshatra"],
+ ["Ganesh Chaturthi","m",5,3,"Bhadrapada Shukla 4","Aug–Sep","Ganesha's day"],
+ ["Anant Chaturdashi","m",5,13,"Bhadrapada Shukla 14","Sep","Ganesha visarjan"],
+ ["Navratri begins","m",6,0,"Ashwin Shukla 1","Sep–Oct","Nine nights of Devi"],
+ ["Dussehra · Vijaya Dashami","m",6,9,"Ashwin Shukla 10","Oct","Victory of Rama / Durga"],
+ ["Sharad Purnima","m",6,14,"Ashwin Purnima","Oct","Brightest Full Moon"],
+ ["Diwali · Deepavali","m",6,29,"Ashwin Amavasya (Amanta)","Oct–Nov","Darkest night → lamps. Kartika Amavasya in Purnimanta"],
+ ["Kartik Purnima · Dev Deepavali","m",7,14,"Kartika Purnima","Nov","Full Moon"],
+ ["Gita Jayanti","m",8,10,"Margashirsha Shukla 11","Dec","Ekadashi"],
+ ["Makar Sankranti · Pongal · Lohri","s",270,null,"Makara Sankranti","14 Jan","Sun turns North — Uttarayana"],
+ ["Vasant Panchami","m",10,4,"Magha Shukla 5","Jan–Feb","Saraswati puja, spring"],
+ ["Maha Shivaratri","m",10,28,"Magha Krishna 14 (Amanta)","Feb–Mar","Night before Amavasya. Phalguna K14 in Purnimanta"],
+ ["Holi","m",11,14,"Phalguna Purnima","Mar","Full Moon — colours"],
+];
+
+// ───────── helpers ─────────
+const P=(r,a)=>{const t=(a-90)*Math.PI/180;return [C+r*Math.cos(t),C+r*Math.sin(t)]};
+const norm=a=>((a%360)+360)%360;
+function sector(r1,r2,a0,a1){const [x0,y0]=P(r2,a0),[x1,y1]=P(r2,a1),[x2,y2]=P(r1,a1),[x3,y3]=P(r1,a0);const big=a1-a0>180?1:0;return `M${x0},${y0}A${r2},${r2} 0 ${big} 1 ${x1},${y1}L${x2},${y2}A${r1},${r1} 0 ${big} 0 ${x3},${y3}Z`}
+function rtext(r,a,txt,size,fill,weight="700",cls="",flipAll=false){const [x,y]=P(r,a);let rot=norm(a);if(!flipAll&&rot>90&&rot<270)rot+=180;return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${size}" font-weight="${weight}" fill="${fill}" text-anchor="middle" dominant-baseline="middle" class="${cls}" transform="rotate(${rot.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)})">${txt}</text>`}
+function moonPath(cx,cy,r,elong){const ph=elong*Math.PI/180,f=(1-Math.cos(ph))/2;let s=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#1c2340" stroke="#8892b8" stroke-width=".8"/>`;if(f<.02)return s;if(f>.98)return s+`<circle cx="${cx}" cy="${cy}" r="${r}" fill="#F4EFD8"/>`;const wax=elong<180,rx=Math.abs(Math.cos(ph))*r;const o=wax?1:0,i=wax?(f>.5?1:0):(f>.5?0:1);return s+`<path d="M${cx},${cy-r}A${r},${r} 0 0 ${o} ${cx},${cy+r}A${rx.toFixed(2)},${r} 0 0 ${i} ${cx},${cy-r}Z" fill="#F4EFD8"/>`}
+// Gregorian date → sidereal sun longitude (deg, 0=Mesha 0) & day-of-year angle
+const dayLon=d=>norm(280.46+0.9856474*d-AYAN); // d = days since J2000
+function daysJ2000(date){return (Date.UTC(date.getFullYear(),date.getMonth(),date.getDate(),12)-Date.UTC(2000,0,1,12))/86400000}
+const monthStartLon=GREG.map((_,i)=>dayLon(daysJ2000(new Date(2026,i,1))));
+
+// ───────── BASE ─────────
+function buildBase(){
+  let s=`<circle cx="${C}" cy="${C}" r="398" fill="url(#bezel)" filter="url(#sh)"/><circle cx="${C}" cy="${C}" r="372" fill="#F7F2E4"/>`;
+  // Bezel: Gregorian months + sankranti ticks
+  GREG.forEach((g,i)=>{const a0=monthStartLon[i],a1=monthStartLon[(i+1)%12];const w=norm(a1-a0);
+    const [x1,y1]=P(372,a0),[x2,y2]=P(398,a0);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,.35)" stroke-width="1.5"/>`;
+    s+=rtext(385,a0+w/2,g.toUpperCase(),16,'#fff','800');
+    for(let d=5;d<30;d+=5){const [tx,ty]=P(372,a0+d*0.9856),[ux,uy]=P(377,a0+d*0.9856);s+=`<line x1="${tx}" y1="${ty}" x2="${ux}" y2="${uy}" stroke="rgba(255,255,255,.25)" stroke-width="1"/>`}
+  });
+  RASHI.forEach((r,i)=>{const a=i*30;const [x1,y1]=P(372,a),[x2,y2]=P(392,a);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${a===270||a===90?'#ff5a4a':'#FFC93C'}" stroke-width="2.5"/>`;});
+  // nakshatra ring 316–366
+  const namingSet={};MONTHS.forEach((m,mi)=>m[2].forEach(i=>namingSet[i]=mi));
+  NK.forEach((nk,i)=>{const a0=i*NK_W,a1=a0+NK_W,mid=a0+NK_W/2,isN=namingSet[i]!==undefined,col=isN?MONTHS[namingSet[i]][3]:null;
+    s+=`<path d="${sector(310,366,a0,a1)}" fill="${isN?col+'26':'#fff'}" stroke="#d9d2bf" stroke-width="1"/>`;
+    const [px,py]=P(330,mid);let rot=mid;if(rot>90&&rot<270)rot+=180;const pts=nk[3],ln=nk[4];const ox=-(Math.max(...pts.map(p=>p[0]))+Math.min(...pts.map(p=>p[0])))/2;
+    let g=`<g transform="translate(${px.toFixed(1)} ${py.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(1.05)">`;
+    ln.forEach(([a,b])=>{g+=`<line x1="${pts[a][0]+ox}" y1="${pts[a][1]}" x2="${pts[b][0]+ox}" y2="${pts[b][1]}" stroke="${isN?col:'#9aa'}" stroke-width="1" stroke-dasharray="2 1.5"/>`});
+    pts.forEach((p,k)=>{g+=`<circle cx="${p[0]+ox}" cy="${p[1]}" r="${pts.length===1?3.2:2}" fill="${isN?col:'#7d8aa8'}"/>`});s+=g+`</g>`;
+    s+=rtext(354,mid,nk[0],10.5,isN?'#222':'#666',isN?'800':'600');
+  });
+  // month labels 290–316
+  MONTHS.forEach(m=>{const a0=m[2][0]*NK_W,a1=(m[2][m[2].length-1]+1)*NK_W;s+=`<path d="${sector(282,310,a0,a1)}" fill="${m[3]}" stroke="#fff" stroke-width="1.5"/>`;s+=rtext(296,(a0+a1)/2,m[0],m[2].length>1?13:11,'#fff','800');});
+  s+=`<circle cx="${C}" cy="${C}" r="282" fill="none" stroke="#e6dcc3"/><circle cx="${C}" cy="${C}" r="310" fill="none" stroke="#e6dcc3"/>`;
+  // rashi ring 254–290
+  RASHI.forEach((r,i)=>{const a0=i*30;s+=`<path d="${sector(242,282,a0,a0+30)}" fill="${i%2?'#EFE9D8':'#F7F2E4'}" stroke="#fff"/>`;s+=rtext(268,a0+15,r,12,'#333','800');s+=rtext(253,a0+15,SANK[i],9,'#8a5a2b','600');
+    const [x1,y1]=P(242,a0),[x2,y2]=P(310,a0);s+=`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${a0===270||a0===90?'#C0392B':'#8a5a2b'}" stroke-width="${a0===270||a0===90?3:1.8}"/>`;});
+  // ritu 228–254
+  RITU.forEach(r=>{s+=`<path d="${sector(214,242,r[2],r[2]+60)}" fill="${r[3]}" stroke="#fff" stroke-width="1.5"/>`;s+=rtext(228,r[2]+30,`${r[0]} · ${r[1]}`,12,'#fff','800');});
+  s+=`<path d="${sector(206,214,270,450)}" fill="#FFE3A3"/><path d="${sector(206,214,90,270)}" fill="#C9D9EE"/>`;
+  s+=rtext(210,0,'UTTARAYANA ↑ North',6.5,'#8a4b00','800');s+=rtext(210,180,'DAKSHINAYANA ↓ South',6.5,'#1f3d6b','800');
+  document.getElementById('base').innerHTML=s;
+}
+// ───────── SUN DISC (r 216) ─────────
+function buildSun(){
+  let s=`<circle cx="${C}" cy="${C}" r="206" fill="#FFF3D6" stroke="#F08C00" stroke-width="2.5" filter="url(#sh)"/>`;
+  for(let t=0;t<30;t++){const a0=t*12,mid=a0+6;s+=`<path d="${sector(166,206,a0,a0+12)}" fill="${t<15?'#FFF8E7':'#EEF0F7'}" stroke="#fff"/>`;const [mx,my]=P(185,mid);s+=moonPath(mx,my,11,mid);s+=rtext(171,mid,String(t+1),8.5,'#555','800');}
+  s+=rtext(155,180,'PURNIMA · Full',9,'#B5306A','800');s+=rtext(155,0,'AMAVASYA · New',9,'#1f3d6b','800');
+  s+=rtext(155,90,'Shukla · waxing',8.5,'#8a4b00','700');s+=rtext(155,270,'Krishna · waning',8.5,'#1f3d6b','700');
+  s+=`<path d="M${P(142,0)}A142,142 0 0 1 ${P(142,29.1)}" fill="none" stroke="#F08C00" stroke-width="4"/>`;s+=rtext(131,14,'≈29° = 1 month',8,'#F08C00','800');
+  // long sun hand to bezel
+  s+=`<line x1="${C}" y1="${C-60}" x2="${C}" y2="${C-393}" stroke="#F08C00" stroke-width="3.5" stroke-linecap="round"/>`;
+  s+=`<polygon points="${C},${C-396} ${C-7},${C-380} ${C+7},${C-380}" fill="#F08C00" stroke="#fff" stroke-width="1"/>`;
+  const [sx,sy]=P(100,0);s+=`<circle cx="${sx}" cy="${sy}" r="24" fill="url(#sunG)" stroke="#fff" stroke-width="1.5"/>`;
+  for(let i=0;i<12;i++){const a=i*30*Math.PI/180;s+=`<line x1="${sx+27*Math.cos(a)}" y1="${sy+27*Math.sin(a)}" x2="${sx+34*Math.cos(a)}" y2="${sy+34*Math.sin(a)}" stroke="#F08C00" stroke-width="2.5" stroke-linecap="round"/>`}
+  s+=`<text x="${sx}" y="${sy+4}" font-size="10" font-weight="800" fill="#7a3d00" text-anchor="middle" font-family="Baloo 2">SURYA</text>`;
+  document.getElementById('sunDisc').innerHTML=s;
+}
+// ───────── WEEK DIAL (centre sub-dial, r 52) ─────────
+function buildWeek(){
+  let s=`<circle cx="${C}" cy="${C}" r="54" fill="#141a3a" stroke="#FFC93C" stroke-width="2"/>`;
+  VARA.forEach((v,i)=>{const a0=i*360/7;s+=`<path d="${sector(30,52,a0,a0+360/7)}" fill="${i%2?'#1c2350':'#232c62'}" stroke="#0d1230"/>`;const [x,y]=P(41,a0+360/14);s+=`<text x="${x}" y="${y+1}" font-size="12" fill="#fff" text-anchor="middle" dominant-baseline="middle">${v[1]}</text>`;const [tx,ty]=P(59,a0+360/14);});
+  s+=`<text x="${C}" y="${C+2}" font-size="8" fill="#FFC93C" text-anchor="middle" dominant-baseline="middle" font-weight="800">VARA</text>`;
+  s+=`<g id="weekHand"><polygon points="${C},${C-52} ${C-4},${C-30} ${C+4},${C-30}" fill="#7effd4" stroke="#fff" stroke-width=".8"/></g>`;
+  document.getElementById('weekDial').innerHTML=s;
+}
+// ───────── MOON ARM (collar r 62 → tip 368) ─────────
+function buildMoon(){
+  let s=`<g mask="url(#armMask)"><path d="M${C-16},${C-62} L${C-16},${C-346} L${C},${C-368} L${C+16},${C-346} L${C+16},${C-62} Z" fill="#2b3a7a" stroke="#D4E4FF" stroke-width="2" filter="url(#sh)"/></g>`;
+  s+=`<circle cx="${C}" cy="${C}" r="62" fill="none" stroke="#D4E4FF" stroke-width="3"/>`;
+  s+=`<circle cx="${C}" cy="${C-185}" r="21" fill="none" stroke="#D4E4FF" stroke-width="3"/>`;
+  s+=``;
+  s+=`<text x="${C}" y="${C-115}" font-size="11" fill="#D4E4FF" text-anchor="middle" font-weight="800" font-family="Baloo 2" transform="rotate(-90 ${C} ${C-120})">CHANDRA</text>`;
+  s+=``;
+  document.getElementById('moonArm').innerHTML=s;
+}
+
+// ───────── STATE ─────────
+let sunA=0,moonA=0,dow=0,clipA=null,months=0,lastResult=null,curDate=new Date(2026,8,14),dateKnown=true;
+const gSun=document.getElementById('sunDisc'),gMoon=document.getElementById('moonArm'),gClip=document.getElementById('clip');
+function setFromDate(d){curDate=d;dateKnown=true;const j=daysJ2000(d);sunA=dayLon(j);moonA=norm(218.316+13.176396*j-AYAN);dow=d.getDay();document.getElementById('dateIn').value=d.toISOString().slice(0,10);}
+function render(){
+  gSun.setAttribute('transform',`rotate(${sunA} ${C} ${C})`);gMoon.setAttribute('transform',`rotate(${moonA} ${C} ${C})`);
+  document.getElementById('weekHand').setAttribute('transform',`rotate(${dow*360/7+360/14} ${C} ${C})`);
+  if(clipA===null)gClip.innerHTML='';else{const [x,y]=P(378,clipA);gClip.innerHTML=`<g transform="rotate(${clipA} ${x} ${y})"><rect x="${x-6}" y="${y-13}" width="12" height="26" rx="4" fill="#C0392B" stroke="#fff" stroke-width="1.5"/></g>`;}
+  readout();
+  if(typeof lensMode!=='undefined'&&lensMode)lensUpdate();
+}
+function monthOf(s){const full=norm(s+180);let best=0,bd=999;MONTHS.forEach((mo,i)=>{const a0=mo[2][0]*NK_W,a1=(mo[2][mo[2].length-1]+1)*NK_W,c=(a0+a1)/2;let d=Math.abs(norm(full-c));if(d>180)d=360-d;if(d<bd){bd=d;best=i}});return best}
+function readout(){
+  const s=norm(sunA),m=norm(moonA),el=norm(m-s),t=Math.floor(el/12);
+  const rIdx=Math.floor(s/30),ritu=RITU.find(r=>norm(s-r[2])<60);
+  document.getElementById('rSun').textContent=`${RASHI[rIdx]} · ${ritu[0]}`;
+  document.getElementById('rSunS').innerHTML=`${ritu[1]} · ${(s>=270||s<90)?'Uttarayana ↑':'Dakshinayana ↓'}<br>${VARA[dow][0]}vara (${VARA[dow][2]})${dateKnown?' · '+curDate.toDateString().slice(4):' · date: custom'}`;
+  const paksha=t<15?'Shukla':'Krishna',n=t<15?t+1:t-14;
+  document.getElementById('rMoon').textContent=t===14?'Purnima':t===29?'Amavasya':`${paksha} ${TITHI[n-1]}`;
+  const nkM=Math.floor(m/NK_W);
+  document.getElementById('rMoonS').innerHTML=`${paksha} ${n} · ${Math.round(el)}° from Sun<br>in <b>${NK[nkM][0]}</b> — ${NK[nkM][2]}`;
+  const mi=monthOf(s),mo=MONTHS[mi],fnk=NK[Math.floor(norm(s+180)/NK_W)];
+  document.getElementById('rMonth').innerHTML=`${mo[0]} <span class="dev" style="font-size:.9rem;color:#ffb3cf">${mo[1]}</span>`;
+  document.getElementById('rMonthS').innerHTML=`Full Moon lands in <b>${fnk[0]}</b> → naming star group <b>${mo[2].map(i=>NK[i][0]).join(' / ')}</b>`;
+  // festival match
+  const hits=FEST.filter(f=>f[1]==='m'?(f[2]===mi&&f[3]===t):Math.abs(((norm(s-f[2])+180)%360)-180)<1);
+  document.getElementById('rFest').textContent=hits.length?hits.map(h=>h[0]).join(' · '):'— none today —';
+  document.getElementById('rFestS').textContent=hits.length?hits.map(h=>`${h[4]}: ${h[6]}`).join(' · '):'Tap a festival below to jump the wheel to it.';
+  if(lastResult){const [k,txt]=lastResult;document.getElementById('rAdh').innerHTML=`Month ${months}: <span class="badge ${k}">${txt}</span>`;}
+}
+// ───────── ACTIONS ─────────
+function stepDay(k){dow=(dow+k+7)%7;sunA+=0.9856*k;moonA+=13.1764*k;if(dateKnown){curDate=new Date(curDate.getTime()+86400000*k);document.getElementById('dateIn').value=curDate.toISOString().slice(0,10);}render()}
+function stepNewMoon(k){const s=norm(sunA);
+  if(clipA===null){clipA=s;moonA=sunA;months=0;lastResult=['b-ok','Clip placed at Amavasya — press again'];render();return;}
+  const s2=norm(s+29.106*k);const lo=k>0?clipA:s2,span=norm(k>0?s2-clipA:clipA-s2);let cross=0;for(let j=1;j<=12;j++){const d=norm(j*30-lo);if(d>0&&d<=span)cross++;}
+  months+=k;const dir=k>0?'':' (going back)';
+  lastResult=cross===1?['b-ok','Normal ✓ (1 line)'+dir]:cross===0?['b-ad','ADHIKA MASA! (0 lines → extra month)'+dir]:['b-ks','KSHAYA MASA (2 lines → month lost)'+dir];
+  clipA=s2;sunA=s2;moonA=s2;dow=(dow+30*k+700)%7;if(dateKnown){curDate=new Date(curDate.getTime()+29.53*86400000*k);document.getElementById('dateIn').value=curDate.toISOString().slice(0,10);}render()}
+function setFull(){moonA=norm(sunA+180);dateKnown=false;render()}
+function setToday(){setFromDate(new Date());clipA=null;lastResult=null;document.getElementById('rAdh').textContent='Press "Next New Moon" to start';render()}
+function gotoFest(i){const f=FEST[i];dateKnown=false;
+  if(f[1]==='s'){sunA=f[2];}else{const mo=MONTHS[f[2]],a0=mo[2][0]*NK_W,a1=(mo[2][mo[2].length-1]+1)*NK_W;sunA=norm((a0+a1)/2-180);moonA=norm(sunA+f[3]*12+6);}
+  render();document.getElementById('stage').scrollIntoView({behavior:'smooth'})}
+document.getElementById('dateIn').addEventListener('change',e=>{const [y,mo,d]=e.target.value.split('-').map(Number);setFromDate(new Date(y,mo-1,d));render()});
+// festival table
+document.querySelector('#festTbl tbody').innerHTML=FEST.map((f,i)=>`<tr onclick="gotoFest(${i})"><td><b>${f[0]}</b></td><td><span class="tag ${f[1]==='m'?'tg-m':'tg-s'}">${f[1]==='m'?'MOON':'SUN'}</span> ${f[4]}</td><td>${f[5]}</td><td class="go">set ›</td></tr>`).join('');
+// ───────── DRAG ─────────
+const svg=document.getElementById('w');
+function ptAngle(e){const r=svg.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*800-C,y=(e.clientY-r.top)/r.height*800-C;return Math.atan2(x,-y)*180/Math.PI}
+let drag=null,lensMode=0,lensTimer=null; // 0 auto (drag only), 1 follow Moon, 2 follow Sun
+function showLoupe(layer){const g=document.getElementById('loupe');const r=layer==='sun'?305:340;const a=layer==='sun'?sunA:moonA;const [px,py]=P(r,a);const k=layer==='sun'?2:2.3;
+  document.getElementById('loupeInner').setAttribute('transform',`translate(${C} ${C}) scale(${k}) translate(${-px} ${-py})`);g.style.display='';}
+function toggleZoom(){const st=document.getElementById('stage');st.classList.toggle('zoom');const z=st.classList.contains('zoom');document.getElementById('zoomBtn').textContent=z?'⤢ Zoom face: ×2 (drag to pan)':'⤢ Zoom face ×2';if(z){requestAnimationFrame(()=>{st.scrollLeft=(st.scrollWidth-st.clientWidth)/2;st.scrollTop=(st.scrollHeight-st.clientHeight)/2;});}}
+function hideLoupe(){document.getElementById('loupe').style.display='none'}
+function toggleLens(){lensMode=(lensMode+1)%3;const b=document.getElementById('lensBtn');b.textContent=['🔍 Lens: on while dragging','🔍 Lens: follow Moon tip','🔍 Lens: follow Sun hand'][lensMode];lensUpdate();}
+function lensUpdate(){if(lensMode===1)showLoupe('moon');else if(lensMode===2)showLoupe('sun');else if(drag)showLoupe(drag.layer);else hideLoupe();}
+const down=layer=>e=>{e.preventDefault();drag={layer,start:ptAngle(e),base:layer==='sun'?sunA:moonA};svg.setPointerCapture&&svg.setPointerCapture(e.pointerId);lensUpdate()};
+gSun.addEventListener('pointerdown',down('sun'));gMoon.addEventListener('pointerdown',down('moon'));
+svg.addEventListener('pointermove',e=>{if(!drag)return;const d=ptAngle(e)-drag.start;if(drag.layer==='sun')sunA=drag.base+d;else moonA=drag.base+d;dateKnown=false;render();lensUpdate();});
+svg.addEventListener('pointerup',()=>{drag=null;clearTimeout(lensTimer);lensTimer=setTimeout(lensUpdate,1500)});svg.addEventListener('pointercancel',()=>{drag=null;lensUpdate()});
+
+buildBase();buildSun();buildWeek();buildMoon();setFromDate(new Date(2026,8,14));render();
+</script>
+</body>
+</html>
